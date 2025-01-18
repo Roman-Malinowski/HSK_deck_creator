@@ -1,0 +1,5 @@
+.git
+venv*
+*.swp
+.ipynb_checkpoints
+*.DS_Store
