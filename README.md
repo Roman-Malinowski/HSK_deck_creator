@@ -9,11 +9,13 @@ Then save the `html` data locally. `Create_flashcards.ipynb` allows to parse the
 
 Note that there are two type of deck being created: one for HSK words (vocabulary list), and one for practice sentences.
 
-### If you want to use non French decks (English, Arab, etc.) you can change the language of the html page on the website. Some minor tweeking to the notebook might be required (namely in the language attributes of `xml` elements, as well as the `grammar_indicator` dictionnary. 
+### If you want to use non English decks (Spanish, Arab, etc.) you can change the language of the html page on the website. Some minor tweeking to the notebook might be required (namely in the language attributes of `xml` elements, as well as the `grammar_indicator` dictionnary.
+
+### For Chinese-French decks, I use the CFDICT database, and the data available [here](https://chine.in/mandarin/dictionnaire/) (https://chine.in/mandarin/dictionnaire/)
 
 AnkiApp allows to automatically detect Pinyin, decks `xml_outputs/automatic_pinyin/` are tailored for this functionnality.
 ### However, the detected pinyin are often wrong. I thus created custom decks with the correct pinyin
-The problem is that there is no way to always show pinyin on the back of the card in "alternate" revision mode. For "words" decks, the custom decks thus have every word in double, one for the French -> Chinese revision, one for the Chinese -> French revision. Sentences decks are only meant to be Chinese -> French, so cards are not duplicated.
+The problem is that there is no way to always show pinyin on the back of the card in "alternate" revision mode. For "words" decks, the custom decks thus have every word in double, one for the English -> Chinese revision, one for the Chinese -> English revision. Sentences decks are only meant to be Chinese -> English, so cards are not duplicated.
 
 # Some usefull info on how the data is organised
 ## Structure of the content dictionnary extracted from the `html` data
@@ -31,7 +33,7 @@ Example of a dictionnary:
  'hanziRaw': '得',
  'trad': '得(助動詞)',
  'pinyinToneSpace': 'dé',
- 'def': 'devoir, pouvoir (particule utilisée pour exprimer la possibilité, la capacité, l’effet, le degré)',
+ 'def': 'to have to, to need to (particle used to express capability, possibility, degree, effect...); must; ought to; to need',
  'mp3File': '得(助动词).mp3',
  'oggFile': '得(助动词).ogg'
 }
@@ -64,7 +66,7 @@ Example:
 ```
 {'hanzi': '你把火点着吧。',
  'pinyinTone': 'Nǐ bǎ huǒ diǎnzhe ba.',
- 'def': 'Vous allumez le feu.'
+ 'def': 'You light the fire.'
 }
 ```
 
@@ -76,22 +78,26 @@ The corresponding HSK level, i.e. `4` for instance.
 (two possible structure for a card):
 
 ```
-<deck name="Chinois">
+<deck name="Chinese">
     <fields>
-        <chinese name='Chinois' sides='11' lang='zh-CN'  pinyinMode='hint'></chinese>
-        <text name='Traduction' sides='01' lang='fr-FR'></text>
+        <chinese name='Chinese' sides='11' lang='zh-CN'  pinyinMode='hint'></chinese>
+        <text name='Translation' sides='01' lang='en-EN'></text>
     </fields>
     <cards>
         <card>
-            <chinese name='Chinois'>月亮</chinese>
-            <text name='Traduction'>Lune</text>
+            <chinese name='Chinese'>月亮</chinese>
+            <text name='Translation'>Lune</text>
         </card>
         <card>
-            <chinese name='Chinois'>
+            <chinese name='Chinese'>
                 <chinese>介绍</chinese>
             </chinese>
-            <text name='Traduction'>Introduire, présenter qqun </text>
+            <text name='Translation'>Introduce someone</text>
         </card>
     </cards>
 </deck>
 ```
+
+
+## French
+The French dictionnary `cfdict.u8` used for translations has the following source: https://chine.in/mandarin/dictionnaire/CFDICT/ (CC BY-SA 3.0)
