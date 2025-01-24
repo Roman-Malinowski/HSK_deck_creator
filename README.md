@@ -1,6 +1,6 @@
 # README
 
-This repo is meant to automatically create HSK revision decks for AnkiApp. French Decks are available in `xml_outputs/`.
+This repo is meant to automatically create HSK revision decks for AnkiApp. English and French Decks are available in `xml_outputs/`.
 
 
 To re-create your own deck, you need to download html source code of [this page](https://hsk.academy/fr/hsk-1-vocabulary-list).
@@ -9,13 +9,14 @@ Then save the `html` data locally. `Create_flashcards.ipynb` allows to parse the
 
 Note that there are two type of deck being created: one for HSK words (vocabulary list), and one for practice sentences.
 
-### If you want to use non English decks (Spanish, Arab, etc.) you can change the language of the html page on the website. Some minor tweeking to the notebook might be required (namely in the language attributes of `xml` elements, as well as the `grammar_indicator` dictionnary.
+AnkiApp allows to automatically detect Pinyin, decks `xml_outputs/automatic_pinyin/` are tailored for this functionnality. However, the detected pinyin are often wrong. I thus created custom decks with the correct pinyin. The problem is that there is no way to always show pinyin on the back of the card in "alternate" revision mode. For "words" decks, the custom decks thus have every word in double, one for the English -> Chinese revision, one for the Chinese -> English revision. Sentences decks are only meant to be Chinese -> English, so cards are not duplicated.
 
-### For Chinese-French decks, I use the CFDICT database, and the data available [here](https://chine.in/mandarin/dictionnaire/) (https://chine.in/mandarin/dictionnaire/)
+---
 
-AnkiApp allows to automatically detect Pinyin, decks `xml_outputs/automatic_pinyin/` are tailored for this functionnality.
-### However, the detected pinyin are often wrong. I thus created custom decks with the correct pinyin
-The problem is that there is no way to always show pinyin on the back of the card in "alternate" revision mode. For "words" decks, the custom decks thus have every word in double, one for the English -> Chinese revision, one for the Chinese -> English revision. Sentences decks are only meant to be Chinese -> English, so cards are not duplicated.
+# If you want to use non English decks (Spanish, Arab, etc.)
+You can change the language of the html page on the website. Some minor tweeking to `hsk_html_parser/html_parser.py` might be required (namely in the the `metadata` of `xml` elements and the `grammar_indicator` attribute. However, it seems that the translations for the cards are from the english words and not directly from the chinses words, which lead to bad translations. Personnaly, I use a Chinese-French dictionary (the CFDICT database available [here](https://chine.in/mandarin/dictionnaire/) (https://chine.in/mandarin/dictionnaire/)) to translate the words myself using the `ChineseToFrenchDictionary` class.
+
+---
 
 # Some usefull info on how the data is organised
 ## Structure of the content dictionnary extracted from the `html` data
