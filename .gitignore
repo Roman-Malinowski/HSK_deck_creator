@@ -3,3 +3,5 @@ venv*
 *.swp
 .ipynb_checkpoints
 *.DS_Store
+!.pylintrc
+!.pre-commit-config.yaml

@@ -1,9 +1,25 @@
 repos:
   - repo: local
     hooks:
+    - id: black
+      name: black
+      entry: black
+      language: system
+      files: \.py$
+      stages: [pre-commit]
+      types: [python]
+
+    - id: pylint
+      name: PyLint
+      entry: pylint --rcfile=.pylintrc
+      language: system
+      files: \.py$
+      types: [python]
+      stages: [pre-commit]
+
     - id: jupyter-nb-clear-output
       name: jupyter-nb-clear-output
       files: \.ipynb$
-      stages: [commit]
+      stages: [pre-commit]
       language: system
       entry: jupyter nbconvert --ClearOutputPreprocessor.enabled=True --inplace
