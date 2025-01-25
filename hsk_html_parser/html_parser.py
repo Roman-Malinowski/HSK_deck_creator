@@ -163,21 +163,22 @@ class HskHtmlParser(HTMLParser):  # pylint: disable=W0223
             self.metadata_key = "English"
             self.dictionary = None
 
-    def translate_entry_to_french(self):
+    def translate_content_to_french(self):
         """
         Swiches the english definition of each word (from HTML) to its french definition (from .u8)
         Returns None
         """
-        for entry in self.content["words"]:
-            word = entry["hanziRaw"].strip()
+        for i in range(len(self.content["words"])):
+            word = self.content["words"][i]["hanziRaw"].strip()
             sub_df = self.dictionary.df[self.dictionary.df["Simplified"] == word]
 
             if len(sub_df) > 1:
                 sub_sub_df = sub_df[
-                    sub_df["Pinyin"] == entry["pinyinToneSpace"].strip()
+                    sub_df["Pinyin"]
+                    == self.content["words"][i]["pinyinToneSpace"].strip()
                 ]
                 if len(sub_sub_df) == 1:
-                    self.content["def"] = sub_sub_df["Translation"].iloc[0]
+                    self.content["words"][i]["def"] = sub_sub_df["Translation"].iloc[0]
                 else:
                     logging.warning(
                         "Multiple translations for %s. Keeping the English translation.",
@@ -188,6 +189,8 @@ class HskHtmlParser(HTMLParser):  # pylint: disable=W0223
                     "%s has no French translation. Keeping the English translation.",
                     word,
                 )
+            else:
+                self.content["words"][i]["def"] = sub_df["Translation"].iloc[0]
 
     def handle_data(self, data):
         """
@@ -208,7 +211,7 @@ class HskHtmlParser(HTMLParser):  # pylint: disable=W0223
             self.content = ast.literal_eval(content)
             self.check_grammar_indicators()
             if self.translate_to_french:
-                self.translate_entry_to_french()
+                self.translate_content_to_french()
 
     def check_grammar_indicators(self):
         """
