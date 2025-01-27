@@ -42,7 +42,7 @@ class ChineseToFrenchDictionary:
     # as a dataframe
     """
 
-    def __init__(self, u8_file):
+    def __init__(self, u8_file=None):
         # A dictionary for corresponding pinyins
         # to their accents, e.g. i3 -> ǐ
         self.pinyin_tone = {
@@ -60,7 +60,8 @@ class ChineseToFrenchDictionary:
         self.vowels_re = re.compile(r"[aeiou\u00fc]+")  # find all vowels
 
         # Puts the dictionary data in a DataFrame
-        self.df = self.process_u8_dictionary(u8_file)
+        if u8_file:
+            self.df = self.process_u8_dictionary(u8_file)
 
     def process_u8_dictionary(self, u8_file):
         """
@@ -104,7 +105,8 @@ class ChineseToFrenchDictionary:
             last_span = 0
             for particule in self.pinyin_re.finditer(pinyins):
                 pinyin_correct = particule.group().lower().replace("v", "\u00fc")
-                pinyin_correct = pinyin_correct.replace("u:", "\u00fc")
+                pinyin_correct = pinyin_correct.lower().replace("u:", "\u00fc")
+
                 vowels = self.vowels_re.search(pinyin_correct)
                 # Check which letter to put accent on
                 if (len(vowels.group()) == 1) or vowels.group()[0] in "aeo":
@@ -155,13 +157,16 @@ class HskHtmlParser(HTMLParser):  # pylint: disable=W0223
             },
         }
         self.translate_to_french = translate_to_french
+        self.cl_re = None
+
         if self.translate_to_french:
             self.metadata_key = "French"
             assert u8_file, "Must provide u8_file if translate_to_french=True"
             self.dictionary = ChineseToFrenchDictionary(u8_file)
+            self.cl_re = re.compile(r"; CL:.*")  # find Classifiers
         else:
             self.metadata_key = "English"
-            self.dictionary = None
+            self.dictionary = ChineseToFrenchDictionary()
 
     def translate_content_to_french(self):
         """
@@ -172,25 +177,35 @@ class HskHtmlParser(HTMLParser):  # pylint: disable=W0223
             word = self.content["words"][i]["hanziRaw"].strip()
             sub_df = self.dictionary.df[self.dictionary.df["Simplified"] == word]
 
+            # Keeping the classifiers
+            # for instance cl='; CL:宗[zōng] ,桩[zhuāng] ,起[qǐ]'
+            cl_str = self.cl_re.findall(self.content["words"][i]["def"])
+            if cl_str:
+                cl_str = self.dictionary.format_pinyin(cl_str[0])
+            else:
+                cl_str = ""
+
             if len(sub_df) > 1:
                 sub_sub_df = sub_df[
                     sub_df["Pinyin"]
                     == self.content["words"][i]["pinyinToneSpace"].strip()
                 ]
                 if len(sub_sub_df) == 1:
-                    self.content["words"][i]["def"] = sub_sub_df["Translation"].iloc[0]
+                    self.content["words"][i]["def"] = (
+                        sub_sub_df["Translation"].iloc[0] + cl_str
+                    )
                 else:
-                    logging.warning(
+                    logger.warning(
                         "Multiple translations for %s. Keeping the English translation.",
                         word,
                     )
             elif len(sub_df) == 0:
-                logging.warning(
+                logger.warning(
                     "%s has no French translation. Keeping the English translation.",
                     word,
                 )
             else:
-                self.content["words"][i]["def"] = sub_df["Translation"].iloc[0]
+                self.content["words"][i]["def"] = sub_df["Translation"].iloc[0] + cl_str
 
     def handle_data(self, data):
         """
@@ -430,7 +445,9 @@ class HskHtmlParser(HTMLParser):  # pylint: disable=W0223
 
             hanzi = word_entry["hanzi"]
             definition = word_entry["def"]
-            pinyin_accent = word_entry["pinyinToneSpace"]
+
+            # Reomving "v4" and other bad pinyins
+            pinyin_accent = self.dictionary.format_pinyin(word_entry["pinyinToneSpace"])
 
             if hanzi != word_entry["hanziRaw"]:
                 # Replacing chinese grammar indicators
@@ -440,14 +457,14 @@ class HskHtmlParser(HTMLParser):  # pylint: disable=W0223
             card = ET.SubElement(cards, "card")
             ET.SubElement(card, "text", attrib={"name": "Front"}).text = hanzi
             ET.SubElement(card, "text", attrib={"name": "Back"}).text = definition
-            pinyin = ET.SubElement(card, "rich-text", attrib={"name": "Pinyin"})
-            ET.SubElement(pinyin, "i").text = pinyin_accent
+            pinyin_elem = ET.SubElement(card, "rich-text", attrib={"name": "Pinyin"})
+            ET.SubElement(pinyin_elem, "b").text = pinyin_accent
 
             card = ET.SubElement(cards, "card")
             ET.SubElement(card, "text", attrib={"name": "Front"}).text = definition
             ET.SubElement(card, "text", attrib={"name": "Back"}).text = hanzi
-            pinyin = ET.SubElement(card, "rich-text", attrib={"name": "Pinyin"})
-            ET.SubElement(pinyin, "i").text = pinyin_accent
+            pinyin_elem = ET.SubElement(card, "rich-text", attrib={"name": "Pinyin"})
+            ET.SubElement(pinyin_elem, "b").text = pinyin_accent
 
         deck_tree = ET.ElementTree(deck)
         deck_tree.write(output_file, encoding="unicode")
@@ -491,13 +508,15 @@ class HskHtmlParser(HTMLParser):  # pylint: disable=W0223
 
             hanzi = word_entry["hanzi"]
             definition = word_entry["def"]
-            pinyin_accent = word_entry["pinyinTone"]
+
+            # Reomving "v4" and other bad pinyins
+            pinyin_accent = self.dictionary.format_pinyin(word_entry["pinyinTone"])
 
             card = ET.SubElement(cards, "card")
             ET.SubElement(card, "text", attrib={"name": "Front"}).text = hanzi
             ET.SubElement(card, "text", attrib={"name": "Back"}).text = definition
-            pinyin = ET.SubElement(card, "rich-text", attrib={"name": "Pinyin"})
-            ET.SubElement(pinyin, "i").text = pinyin_accent
+            pinyin_elem = ET.SubElement(card, "rich-text", attrib={"name": "Pinyin"})
+            ET.SubElement(pinyin_elem, "b").text = pinyin_accent
 
         deck_tree = ET.ElementTree(deck)
         deck_tree.write(output_file, encoding="unicode")
