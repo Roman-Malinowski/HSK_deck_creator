@@ -3,7 +3,7 @@
 This repo is meant to automatically create HSK revision decks for AnkiApp. English and French Decks are available in `xml_outputs/`.
 
 
-To re-create your own deck, you need to download html source code of [this page](https://hsk.academy/fr/hsk-1-vocabulary-list).
+To re-create your own deck, you need to download html source code of [this page](https://hsk.academy/en/hsk-1-vocabulary-list).
 If it does not work, copy this link: `https://hsk.academy/fr/hsk-1-vocabulary-list`.
 Then save the `html` data locally. `Create_flashcards.ipynb` allows to parse the html data, extract the word list, and create a `.xml` file to import in AnkiApp.
 
