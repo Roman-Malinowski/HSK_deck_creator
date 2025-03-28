@@ -157,13 +157,12 @@ class HskHtmlParser(HTMLParser):  # pylint: disable=W0223
             },
         }
         self.translate_to_french = translate_to_french
-        self.cl_re = None
+        self.cl_re = re.compile(r"; CL:.*")
 
         if self.translate_to_french:
             self.metadata_key = "French"
             assert u8_file, "Must provide u8_file if translate_to_french=True"
             self.dictionary = ChineseToFrenchDictionary(u8_file)
-            self.cl_re = re.compile(r"; CL:.*")  # find Classifiers
         else:
             self.metadata_key = "English"
             self.dictionary = ChineseToFrenchDictionary()
@@ -177,23 +176,13 @@ class HskHtmlParser(HTMLParser):  # pylint: disable=W0223
             word = self.content["words"][i]["hanziRaw"].strip()
             sub_df = self.dictionary.df[self.dictionary.df["Simplified"] == word]
 
-            # Keeping the classifiers
-            # for instance cl='; CL:宗[zōng] ,桩[zhuāng] ,起[qǐ]'
-            cl_str = self.cl_re.findall(self.content["words"][i]["def"])
-            if cl_str:
-                cl_str = self.dictionary.format_pinyin(cl_str[0])
-            else:
-                cl_str = ""
-
             if len(sub_df) > 1:
                 sub_sub_df = sub_df[
                     sub_df["Pinyin"]
                     == self.content["words"][i]["pinyinToneSpace"].strip()
                 ]
                 if len(sub_sub_df) == 1:
-                    self.content["words"][i]["def"] = (
-                        sub_sub_df["Translation"].iloc[0] + cl_str
-                    )
+                    self.content["words"][i]["def"] = sub_sub_df["Translation"].iloc[0]
                 else:
                     logger.warning(
                         "Multiple translations for %s. Keeping the English translation.",
@@ -205,7 +194,7 @@ class HskHtmlParser(HTMLParser):  # pylint: disable=W0223
                     word,
                 )
             else:
-                self.content["words"][i]["def"] = sub_df["Translation"].iloc[0] + cl_str
+                self.content["words"][i]["def"] = sub_df["Translation"].iloc[0]
 
     def handle_data(self, data):
         """
@@ -225,6 +214,20 @@ class HskHtmlParser(HTMLParser):  # pylint: disable=W0223
             ]  # removing the last ';'
             self.content = ast.literal_eval(content)
             self.check_grammar_indicators()
+            if "words" in self.content.keys():
+                for i in range(len(self.content["words"])):
+                    # Keeping the classifiers
+                    # for instance cl='; CL:宗[zōng] ,桩[zhuāng] ,起[qǐ]'
+                    word_def = self.content["words"][i]["def"]
+                    cl_str = next(self.cl_re.finditer(word_def), None)
+                    if cl_str:
+                        # Not considering the fist 5 characters "; CL:"
+                        self.content["words"][i]["CL"] = self.dictionary.format_pinyin(
+                            cl_str.group()[5:]
+                        ).replace(" ,", ", ")
+                        self.content["words"][i]["def"] = word_def[: cl_str.span()[0]]
+                    else:
+                        self.content["words"][i]["CL"] = None
             if self.translate_to_french:
                 self.translate_content_to_french()
 
@@ -322,6 +325,8 @@ class HskHtmlParser(HTMLParser):  # pylint: disable=W0223
 
             hanzi = word_entry["hanzi"]
             definition = word_entry["def"]
+            if word_entry["CL"]:
+                definition += "; CL: " + word_entry["CL"]
 
             if hanzi != word_entry["hanziRaw"]:
                 # Replacing chinese grammar indicators
@@ -445,6 +450,8 @@ class HskHtmlParser(HTMLParser):  # pylint: disable=W0223
 
             hanzi = word_entry["hanzi"]
             definition = word_entry["def"]
+            if word_entry["CL"]:
+                definition += "; CL: " + word_entry["CL"]
 
             # Reomving "v4" and other bad pinyins
             pinyin_accent = self.dictionary.format_pinyin(word_entry["pinyinToneSpace"])
@@ -520,3 +527,55 @@ class HskHtmlParser(HTMLParser):  # pylint: disable=W0223
 
         deck_tree = ET.ElementTree(deck)
         deck_tree.write(output_file, encoding="unicode")
+
+    def create_ankiweb_txt_for_words(self, output_file=""):
+        """
+        Create a simple AnkiWeb text file with words from the HTML HSK file.
+        Fields are French;Hanzi;Pinyin;CL
+
+        Template for the deck should be
+        Front : {{French}}
+        Back  : {{FrontSide}}<hr id=answer>{{Chinese}}<br>{{Pinyin}}<br>{{#CL}}CL: {{CL}}{{/CL}}
+
+        Positionnal arguments:
+        output_file (str) -- Path to the output .txt file
+        Returns None
+        """
+        txt_content = ""
+
+        for word_entry in self.content["words"]:
+            if word_entry["hanzi"] != word_entry["hanziRaw"]:
+                # Replacing chinese grammar indicators
+                for key, value in self.grammar_indicator.items():
+                    word_entry["hanzi"] = word_entry["hanzi"].replace(key, value)
+            txt_content += (
+                f'"{word_entry["def"]}";"{word_entry["hanzi"]}";'
+                f'"{word_entry["pinyinToneSpace"]}";'
+                f'"{word_entry["CL"] if word_entry["CL"] else ""}"\n'
+            )
+
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.writelines(txt_content)
+
+    def create_ankiweb_txt_for_sentences(self, output_file=""):
+        """
+        Create a simple AnkiWeb text file with sentences from the HTML HSK file.
+        Fields are French;Hanzi;Pinyin
+
+        Template for the deck should be
+        Front : {{French}}
+        Back  : {{FrontSide}}<hr id=answer>{{Chinese}}<br>{{Pinyin}}
+
+        Positionnal arguments:
+        output_file (str) -- Path to the output .txt file
+        Returns None
+        """
+        txt_content = ""
+
+        for sentence_entry in self.content["localizedSentences"]:
+            txt_content += (
+                f'"{sentence_entry["def"]}";"{sentence_entry["hanzi"]}";'
+                f'"{sentence_entry["pinyinTone"]}"\n'
+            )
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.writelines(txt_content)
